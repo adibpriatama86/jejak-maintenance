@@ -9,8 +9,38 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifikasiRouteImport } from './routes/verifikasi'
+import { Route as RiwayatRouteImport } from './routes/riwayat'
+import { Route as RegistrasiRouteImport } from './routes/registrasi'
+import { Route as EdukasiRouteImport } from './routes/edukasi'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VerifikasiRoute = VerifikasiRouteImport.update({
+  id: '/verifikasi',
+  path: '/verifikasi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RiwayatRoute = RiwayatRouteImport.update({
+  id: '/riwayat',
+  path: '/riwayat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistrasiRoute = RegistrasiRouteImport.update({
+  id: '/registrasi',
+  path: '/registrasi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EdukasiRoute = EdukasiRouteImport.update({
+  id: '/edukasi',
+  path: '/edukasi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +49,102 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
+  '/edukasi': typeof EdukasiRoute
+  '/registrasi': typeof RegistrasiRoute
+  '/riwayat': typeof RiwayatRoute
+  '/verifikasi': typeof VerifikasiRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
+  '/edukasi': typeof EdukasiRoute
+  '/registrasi': typeof RegistrasiRoute
+  '/riwayat': typeof RiwayatRoute
+  '/verifikasi': typeof VerifikasiRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
+  '/edukasi': typeof EdukasiRoute
+  '/registrasi': typeof RegistrasiRoute
+  '/riwayat': typeof RiwayatRoute
+  '/verifikasi': typeof VerifikasiRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/edukasi'
+    | '/registrasi'
+    | '/riwayat'
+    | '/verifikasi'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/edukasi'
+    | '/registrasi'
+    | '/riwayat'
+    | '/verifikasi'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/edukasi'
+    | '/registrasi'
+    | '/riwayat'
+    | '/verifikasi'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRoute
+  EdukasiRoute: typeof EdukasiRoute
+  RegistrasiRoute: typeof RegistrasiRoute
+  RiwayatRoute: typeof RiwayatRoute
+  VerifikasiRoute: typeof VerifikasiRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verifikasi': {
+      id: '/verifikasi'
+      path: '/verifikasi'
+      fullPath: '/verifikasi'
+      preLoaderRoute: typeof VerifikasiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/riwayat': {
+      id: '/riwayat'
+      path: '/riwayat'
+      fullPath: '/riwayat'
+      preLoaderRoute: typeof RiwayatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registrasi': {
+      id: '/registrasi'
+      path: '/registrasi'
+      fullPath: '/registrasi'
+      preLoaderRoute: typeof RegistrasiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/edukasi': {
+      id: '/edukasi'
+      path: '/edukasi'
+      fullPath: '/edukasi'
+      preLoaderRoute: typeof EdukasiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +157,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRoute,
+  EdukasiRoute: EdukasiRoute,
+  RegistrasiRoute: RegistrasiRoute,
+  RiwayatRoute: RiwayatRoute,
+  VerifikasiRoute: VerifikasiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
