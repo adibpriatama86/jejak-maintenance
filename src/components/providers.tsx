@@ -4,6 +4,7 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { SOLANA_ENDPOINT } from "@/lib/solana";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [qc] = useState(() => new QueryClient());
