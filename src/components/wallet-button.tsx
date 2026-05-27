@@ -1,18 +1,16 @@
-import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from "wagmi";
-import { sepolia } from "wagmi/chains";
-import { Wallet, LogOut, AlertTriangle } from "lucide-react";
-import { shortAddress, getUserByWallet } from "@/data/users";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Wallet, LogOut, ExternalLink, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { shortAddress } from "@/data/users";
+import { explorerAddressUrl, NETWORK_LABEL } from "@/lib/solana";
+import { toast } from "sonner";
 
 export function WalletButton() {
-  const { address, isConnected } = useAccount();
-  const { connect, connectors, isPending, error } = useConnect();
-  const { disconnect } = useDisconnect();
-  const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
+  const { publicKey, connected, connecting, disconnect, select, connect, wallets } = useWallet();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const address = publicKey?.toBase58() ?? null;
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -22,24 +20,43 @@ export function WalletButton() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  const user = getUserByWallet(address);
-  const wrongNetwork = isConnected && chainId !== sepolia.id;
+  async function handleConnect() {
+    const phantom = wallets.find((w) => w.adapter.name === "Phantom");
+    if (!phantom) {
+      toast.error("Phantom belum terpasang", {
+        description: "Install ekstensi Phantom dari phantom.app lalu coba lagi.",
+        action: {
+          label: "Install Phantom",
+          onClick: () => window.open("https://phantom.app/download", "_blank"),
+        },
+      });
+      return;
+    }
+    if (phantom.readyState !== "Installed" && phantom.readyState !== "Loadable") {
+      toast.error("Phantom tidak terdeteksi", {
+        description: "Pastikan ekstensi Phantom aktif di browser kamu.",
+      });
+      return;
+    }
+    try {
+      select(phantom.adapter.name);
+      await connect();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Gagal menghubungkan wallet.";
+      toast.error("Koneksi wallet gagal", { description: msg });
+    }
+  }
 
-  const injectedConnector = connectors.find((c) => c.id === "injected") ?? connectors[0];
-
-  if (!isConnected) {
+  if (!connected || !address) {
     return (
-      <div className="flex flex-col items-end gap-1">
-        <button
-          onClick={() => injectedConnector && connect({ connector: injectedConnector })}
-          disabled={isPending || !injectedConnector}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition hover:opacity-90 disabled:opacity-50"
-        >
-          <Wallet className="h-4 w-4" />
-          {isPending ? "Menghubungkan…" : "Hubungkan Wallet"}
-        </button>
-        {error && <span className="text-xs text-destructive">{error.message}</span>}
-      </div>
+      <button
+        onClick={handleConnect}
+        disabled={connecting}
+        className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition hover:opacity-90 disabled:opacity-50"
+      >
+        {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
+        {connecting ? "Menghubungkan…" : "Hubungkan Phantom"}
+      </button>
     );
   }
 
@@ -50,11 +67,10 @@ export function WalletButton() {
         className="glass inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium shadow-soft hover:shadow-glow transition"
       >
         <span className="relative flex h-2 w-2">
-          <span className={`absolute inset-0 rounded-full ${wrongNetwork ? "bg-warning" : "bg-success"} animate-ping opacity-60`} />
-          <span className={`relative h-2 w-2 rounded-full ${wrongNetwork ? "bg-warning" : "bg-success"}`} />
+          <span className="absolute inset-0 rounded-full bg-success animate-ping opacity-60" />
+          <span className="relative h-2 w-2 rounded-full bg-success" />
         </span>
-        <span className="hidden sm:inline">{user?.name ?? shortAddress(address)}</span>
-        <span className="sm:hidden">{shortAddress(address)}</span>
+        <span>{shortAddress(address)}</span>
       </button>
       <AnimatePresence>
         {open && (
@@ -62,23 +78,22 @@ export function WalletButton() {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="glass absolute right-0 mt-2 w-64 rounded-2xl p-3 shadow-glow z-50"
+            className="glass absolute right-0 mt-2 w-72 rounded-2xl p-3 shadow-glow z-50"
           >
             <div className="px-2 py-2">
-              <div className="text-xs text-muted-foreground">Terhubung sebagai</div>
-              <div className="font-semibold">{user?.name ?? "Wallet tidak dikenal"}</div>
-              {user && <div className="text-xs text-accent">{user.role}</div>}
-              <div className="mt-1 truncate font-mono text-xs text-muted-foreground">{address}</div>
+              <div className="text-xs text-muted-foreground">Terhubung di {NETWORK_LABEL}</div>
+              <div className="font-semibold">Phantom Wallet</div>
+              <div className="mt-1 break-all font-mono text-xs text-muted-foreground">{address}</div>
             </div>
-            {wrongNetwork && (
-              <button
-                onClick={() => switchChain({ chainId: sepolia.id })}
-                className="mt-1 flex w-full items-center gap-2 rounded-xl bg-warning/15 px-3 py-2 text-left text-sm text-warning-foreground hover:bg-warning/25"
-              >
-                <AlertTriangle className="h-4 w-4" />
-                Pindah ke Sepolia
-              </button>
-            )}
+            <a
+              href={explorerAddressUrl(address)}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-secondary"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Lihat di Solana Explorer
+            </a>
             <button
               onClick={() => {
                 disconnect();

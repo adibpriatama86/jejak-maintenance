@@ -4,16 +4,30 @@ import { useEffect, useMemo, useState } from "react";
 import { getAllRecords, type MaintenanceRecord } from "@/lib/registry";
 import { useRegistryVersion } from "@/hooks/use-registry";
 import { getEquipmentByCode } from "@/data/equipment";
-import { getUserByWallet, shortAddress, shortHash } from "@/data/users";
+import { shortAddress, shortHash, shortSig } from "@/data/users";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, Inbox, Clock, AlertCircle, Globe2, UserRound, Wallet } from "lucide-react";
-import { useAccount } from "wagmi";
+import {
+  RefreshCw,
+  Inbox,
+  Clock,
+  AlertCircle,
+  Globe2,
+  UserRound,
+  Wallet,
+  ExternalLink,
+} from "lucide-react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { explorerTxUrl } from "@/lib/solana";
 
 export const Route = createFileRoute("/riwayat")({
   head: () => ({
     meta: [
       { title: "Riwayat Registrasi — MaintProof" },
-      { name: "description", content: "Lihat seluruh transaksi pendaftaran laporan maintenance terbaru di MaintProof." },
+      {
+        name: "description",
+        content:
+          "Daftar transaksi memo Solana Devnet hasil registrasi laporan maintenance.",
+      },
     ],
   }),
   component: RiwayatPage,
@@ -28,16 +42,20 @@ type Tab = "publik" | "saya";
 
 function RiwayatPage() {
   const v = useRegistryVersion();
-  const { address, isConnected } = useAccount();
+  const { publicKey, connected } = useWallet();
+  const address = publicKey?.toBase58() ?? null;
   const [tab, setTab] = useState<Tab>("publik");
   const [state, setState] = useState<State>({ kind: "loading" });
 
   function load() {
     setState({ kind: "loading" });
     try {
-      setTimeout(() => setState({ kind: "ready", data: getAllRecords() }), 300);
+      setTimeout(() => setState({ kind: "ready", data: getAllRecords() }), 250);
     } catch (e) {
-      setState({ kind: "error", message: e instanceof Error ? e.message : "Gagal memuat riwayat." });
+      setState({
+        kind: "error",
+        message: e instanceof Error ? e.message : "Gagal memuat riwayat.",
+      });
     }
   }
 
@@ -47,14 +65,13 @@ function RiwayatPage() {
     if (state.kind !== "ready") return [];
     if (tab === "publik") return state.data;
     if (!address) return [];
-    const lower = address.toLowerCase();
-    return state.data.filter((r) => r.registeredBy.toLowerCase() === lower);
+    return state.data.filter((r) => r.registeredBy === address);
   }, [state, tab, address]);
 
   return (
     <PageShell
       title="Riwayat Registrasi"
-      description="Daftar laporan maintenance yang sudah dicatat ke blockchain, terbaru di atas."
+      description="Semua transaksi memo MaintProof di Solana Devnet, terbaru di atas."
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <SegmentedTabs tab={tab} onChange={setTab} />
@@ -70,7 +87,9 @@ function RiwayatPage() {
             onClick={load}
             className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium hover:shadow-glow"
           >
-            <RefreshCw className={`h-4 w-4 ${state.kind === "loading" ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${state.kind === "loading" ? "animate-spin" : ""}`}
+            />
             Refresh
           </button>
         </div>
@@ -107,14 +126,15 @@ function RiwayatPage() {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            {tab === "saya" && !isConnected ? (
+            {tab === "saya" && !connected ? (
               <GlassCard className="text-center py-16">
                 <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
                   <Wallet className="h-7 w-7" />
                 </span>
-                <div className="font-semibold">Wallet belum terhubung</div>
+                <div className="font-semibold">Phantom belum terhubung</div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Hubungkan wallet untuk melihat riwayat registrasi Anda.
+                  Hubungkan Phantom di kanan atas untuk melihat riwayat
+                  registrasimu.
                 </p>
               </GlassCard>
             ) : filtered.length === 0 ? (
@@ -123,12 +143,12 @@ function RiwayatPage() {
                   <Inbox className="h-7 w-7" />
                 </span>
                 <div className="font-semibold">
-                  {tab === "publik" ? "Belum ada riwayat" : "Belum ada laporan Anda"}
+                  {tab === "publik" ? "Belum ada riwayat" : "Belum ada laporanmu"}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {tab === "publik"
-                    ? "Belum ada riwayat registrasi."
-                    : "Belum ada laporan yang Anda daftarkan dari wallet ini."}
+                    ? "Belum ada laporan yang dicatat ke Solana Devnet."
+                    : "Wallet ini belum pernah mendaftarkan laporan."}
                 </p>
                 <Link
                   to="/registrasi"
@@ -141,11 +161,14 @@ function RiwayatPage() {
               <motion.div
                 initial="hidden"
                 animate="show"
-                variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
+                variants={{
+                  hidden: {},
+                  show: { transition: { staggerChildren: 0.04 } },
+                }}
                 className="space-y-3"
               >
                 {filtered.map((r) => (
-                  <RecordRow key={r.fileHash} record={r} />
+                  <RecordRow key={r.signature} record={r} />
                 ))}
               </motion.div>
             )}
@@ -170,7 +193,6 @@ function SegmentedTabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void
             key={it.id}
             onClick={() => onChange(it.id)}
             className="relative z-10 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
-            style={{ color: active ? "hsl(var(--primary-foreground))" : undefined }}
           >
             {active && (
               <motion.span
@@ -179,8 +201,16 @@ function SegmentedTabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void
                 transition={{ type: "spring", stiffness: 400, damping: 32 }}
               />
             )}
-            <span className={active ? "text-primary-foreground" : "text-foreground/70"}>{it.icon}</span>
-            <span className={active ? "text-primary-foreground" : "text-foreground/80"}>{it.label}</span>
+            <span
+              className={active ? "text-primary-foreground" : "text-foreground/70"}
+            >
+              {it.icon}
+            </span>
+            <span
+              className={active ? "text-primary-foreground" : "text-foreground/80"}
+            >
+              {it.label}
+            </span>
           </button>
         );
       })}
@@ -189,8 +219,10 @@ function SegmentedTabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void
 }
 
 function RecordRow({ record }: { record: MaintenanceRecord }) {
-  const eq = useMemo(() => getEquipmentByCode(record.equipmentCode), [record.equipmentCode]);
-  const user = getUserByWallet(record.registeredBy);
+  const eq = useMemo(
+    () => getEquipmentByCode(record.equipmentCode),
+    [record.equipmentCode],
+  );
   const date = new Date(record.registeredAt * 1000);
   const typeColor: Record<string, string> = {
     Preventive: "bg-primary/10 text-primary",
@@ -207,29 +239,57 @@ function RecordRow({ record }: { record: MaintenanceRecord }) {
         <div className="flex flex-wrap items-start gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">{eq?.name ?? "Equipment tidak dikenal"}</span>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${typeColor[record.maintenanceType] ?? "bg-secondary"}`}>
+              <span className="font-semibold">
+                {eq?.name ?? record.equipmentName ?? "Equipment"}
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  typeColor[record.maintenanceType] ?? "bg-secondary"
+                }`}
+              >
                 {record.maintenanceType}
               </span>
             </div>
-            <div className="mt-1 font-mono text-xs text-muted-foreground">{record.equipmentCode}</div>
-            <p className="mt-2 line-clamp-2 text-sm text-foreground/80">{record.note}</p>
+            <div className="mt-1 font-mono text-xs text-muted-foreground">
+              {record.equipmentCode}
+            </div>
+            <p className="mt-2 line-clamp-2 text-sm text-foreground/80">
+              {record.note}
+            </p>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span>
-                Oleh <span className="font-medium text-foreground">{user?.name ?? shortAddress(record.registeredBy)}</span>
-                {user && <span className="ml-1 text-accent">· {user.role}</span>}
+              <span className="font-mono" title={record.registeredBy}>
+                {shortAddress(record.registeredBy)}
               </span>
-              <span className="font-mono" title={record.registeredBy}>{shortAddress(record.registeredBy)}</span>
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {date.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                {date.toLocaleString("id-ID", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </span>
+              <span>
+                Hash:{" "}
+                <span className="font-mono text-foreground">
+                  {shortHash(record.fileHash)}
+                </span>
+              </span>
+              <span>
+                Tx:{" "}
+                <span className="font-mono text-foreground">
+                  {shortSig(record.signature)}
+                </span>
               </span>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-muted-foreground">Hash</div>
-            <div className="font-mono text-xs">{shortHash(record.fileHash)}</div>
-          </div>
+          <a
+            href={explorerTxUrl(record.signature)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Lihat Transaksi
+          </a>
         </div>
       </GlassCard>
     </motion.div>
