@@ -206,16 +206,22 @@ function FoundCard({ record }: { record: MaintenanceRecord }) {
         <Row icon={FileSignature} label="Catatan">
           <p className="text-foreground/90">{record.note}</p>
         </Row>
-        <Row icon={User2} label="Didaftarkan oleh">
-          <div className="font-semibold">{user?.name ?? "Wallet tidak dikenal"}</div>
-          <div className="text-xs text-muted-foreground">
-            {user ? <span className="text-accent">{user.role}</span> : "Tanpa role"} · {shortAddress(record.registeredBy)}
-          </div>
+        <Row icon={User2} label="Wallet Pengirim">
+          <div className="font-mono text-xs break-all">{record.registeredBy}</div>
+          <div className="text-xs text-muted-foreground">{shortAddress(record.registeredBy)}</div>
         </Row>
         <Row icon={Calendar} label="Waktu Pendaftaran">
           {date.toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" })}
         </Row>
       </div>
+      <a
+        href={`https://explorer.solana.com/tx/${record.signature}?cluster=devnet`}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow hover:opacity-95"
+      >
+        Lihat Transaksi di Solana Explorer
+      </a>
     </GlassCard>
   );
 }
