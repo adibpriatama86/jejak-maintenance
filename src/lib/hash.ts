@@ -1,6 +1,6 @@
 /**
- * SHA-256 hashing helpers menggunakan Web Crypto API.
- * Hash dihasilkan langsung di browser — file tidak pernah dikirim ke server.
+ * SHA-256 hashing helpers (Web Crypto API). File diproses lokal di browser —
+ * tidak pernah dikirim ke server.
  */
 export async function sha256File(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();

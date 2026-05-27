@@ -1,21 +1,36 @@
 /**
- * Mock blockchain registry — menyimulasikan smart contract MaintenanceRegistry
- * di localStorage. Saat smart contract real sudah di-deploy ke Sepolia, ganti
- * implementasi ini dengan call wagmi/viem ke contract address.
+ * Registry MaintProof berbasis Solana "lite":
+ * - Bukti registrasi disimpan ON-CHAIN sebagai memo transaction di Solana Devnet.
+ * - Index ringan (signature + metadata) di-cache di localStorage agar UI bisa
+ *   menampilkan riwayat tanpa harus scan getSignaturesForAddress untuk semua user.
+ *   Sumber kebenaran tetap blockchain: tiap item bisa di-verifikasi di Solana Explorer.
  */
 import type { MaintenanceType } from "@/data/equipment";
 
 export type MaintenanceRecord = {
-  fileHash: string; // 0x...
+  fileHash: string; // 0x... SHA-256
   equipmentCode: string;
+  equipmentName?: string;
   maintenanceType: MaintenanceType;
   note: string;
   registeredAt: number; // unix seconds
-  registeredBy: string; // wallet address
-  txHash: string; // simulated tx hash
+  registeredBy: string; // base58 wallet address
+  signature: string; // Solana transaction signature
 };
 
-const STORAGE_KEY = "maintproof:registry:v1";
+export const MEMO_VERSION = "maintproof.v1";
+
+export type MemoPayload = {
+  app: typeof MEMO_VERSION;
+  hash: string;
+  eq: string;
+  eqName?: string;
+  type: MaintenanceType;
+  note: string;
+  ts: number;
+};
+
+const STORAGE_KEY = "maintproof:registry:solana:v1";
 
 function readAll(): MaintenanceRecord[] {
   if (typeof window === "undefined") return [];
@@ -30,14 +45,14 @@ function readAll(): MaintenanceRecord[] {
 }
 
 function writeAll(records: MaintenanceRecord[]) {
+  if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  // Beritahu listener lain di app
   window.dispatchEvent(new CustomEvent("maintproof:updated"));
 }
 
 export function getAllRecords(): MaintenanceRecord[] {
-  // Non-mutating reverse — copy array dulu sebelum reverse
-  return [...readAll()].reverse();
+  // Terbaru duluan
+  return [...readAll()].sort((a, b) => b.registeredAt - a.registeredAt);
 }
 
 export function getRecordCount(): number {
@@ -50,45 +65,40 @@ export function verifyRecord(fileHash: string): MaintenanceRecord | null {
   return all.find((r) => r.fileHash.toLowerCase() === lower) ?? null;
 }
 
-export type RegisterInput = {
-  fileHash: string;
-  equipmentCode: string;
-  maintenanceType: MaintenanceType;
-  note: string;
-  registeredBy: string;
-};
-
 export class DuplicateHashError extends Error {
   constructor() {
-    super("Hash dokumen ini sudah pernah didaftarkan sebelumnya.");
+    super("Hash dokumen ini sudah pernah didaftarkan di blockchain.");
   }
 }
 
-function randomTxHash(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let hex = "0x";
-  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
-  return hex;
+export function hasHash(fileHash: string): boolean {
+  return readAll().some(
+    (r) => r.fileHash.toLowerCase() === fileHash.toLowerCase(),
+  );
 }
 
-export async function registerRecord(input: RegisterInput): Promise<MaintenanceRecord> {
-  // Simulasi delay konfirmasi blockchain
-  await new Promise((r) => setTimeout(r, 1200));
-
+export function appendRecord(record: MaintenanceRecord) {
   const all = readAll();
-  if (all.some((r) => r.fileHash.toLowerCase() === input.fileHash.toLowerCase())) {
-    throw new DuplicateHashError();
-  }
-
-  const record: MaintenanceRecord = {
-    ...input,
-    registeredAt: Math.floor(Date.now() / 1000),
-    txHash: randomTxHash(),
-  };
-
+  if (all.some((r) => r.signature === record.signature)) return;
   writeAll([...all, record]);
-  return record;
+}
+
+export function buildMemoPayload(input: {
+  fileHash: string;
+  equipmentCode: string;
+  equipmentName?: string;
+  maintenanceType: MaintenanceType;
+  note: string;
+}): MemoPayload {
+  return {
+    app: MEMO_VERSION,
+    hash: input.fileHash,
+    eq: input.equipmentCode,
+    eqName: input.equipmentName,
+    type: input.maintenanceType,
+    note: input.note,
+    ts: Math.floor(Date.now() / 1000),
+  };
 }
 
 export function subscribeRegistry(cb: () => void): () => void {
