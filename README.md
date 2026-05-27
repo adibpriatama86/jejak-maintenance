@@ -1,123 +1,89 @@
-# MaintProof
+# MaintProof — Solana Devnet Edition
 
-Sistem verifikasi integritas laporan maintenance berbasis blockchain.
-Mencatat **hash SHA-256** dokumen ke smart contract di Ethereum (Sepolia testnet),
-sehingga keaslian laporan bisa diverifikasi kapan pun tanpa pernah mengunggah
-file aslinya ke jaringan.
+MaintProof adalah sistem verifikasi integritas laporan maintenance berbasis
+**Solana Devnet**. File asli tidak pernah meninggalkan browser — sistem hanya
+mencatat **SHA-256 hash** + metadata laporan ke blockchain sebagai
+**memo transaction** (tanpa smart contract / Anchor).
 
-> ⚠️ Demo edukasi. Semua nama equipment, area, dan user adalah dummy.
+## Arsitektur "Solana-lite"
 
-## ✨ Fitur
+```
+Browser (React)
+  ├─ SHA-256 hash file (Web Crypto)
+  ├─ Pilih equipment + isi metadata
+  ├─ Bangun memo instruction → SPL Memo Program (MemoSq4g…)
+  ├─ Phantom sign + submit ke Solana Devnet
+  └─ Simpan signature di index lokal (untuk UI riwayat)
+                ↓
+        Solana Devnet (bukti permanen)
+                ↓
+        Solana Explorer (audit publik)
+```
 
-- **Dashboard** — ringkasan jumlah laporan, equipment, network, dan status wallet
-- **Registrasi Laporan** — pilih area → bagian → equipment, hitung hash file di browser, kirim ke blockchain
-- **Verifikasi Dokumen** — upload file atau tempel hash, sistem cek apakah pernah didaftarkan
-- **Riwayat** — daftar transaksi pendaftaran terbaru lengkap dengan jejak audit
-- **Edukasi** — penjelasan singkat tentang hash, blockchain, dan arsitektur sistem
-- Theme **Terang / Gelap / Sistem**, default mengikuti device
-- **Mode Simulasi**: jika `VITE_CONTRACT_ADDRESS` belum diisi, app berjalan
-  sepenuhnya secara lokal (data disimpan di `localStorage`) — cocok untuk demo cepat tanpa wallet & gas.
+- **Sumber kebenaran:** memo on-chain di Solana Devnet.
+- **Index lokal (localStorage):** hanya cache supaya halaman Riwayat ringan —
+  setiap item bisa diverifikasi ke Explorer via tombol *Lihat Transaksi*.
 
-## 🧱 Tech Stack
+## Tech stack
 
-| Layer            | Pilihan                                |
-| ---------------- | -------------------------------------- |
-| Frontend         | React 19 + TypeScript + Vite + TanStack Start |
-| Styling          | Tailwind CSS v4 + design tokens (oklch) |
-| Animasi          | Framer Motion                          |
-| Web3             | wagmi v2 + viem (injected connectors)  |
-| Hash             | Web Crypto API (SHA-256)               |
-| Smart Contract   | Solidity 0.8.24                        |
-| Local/Testnet    | Hardhat                                |
-| Target Deploy    | Sepolia Testnet                        |
+- React 19 + TanStack Start + TanStack Router
+- Tailwind v4 + Framer Motion (UI dark glassmorphism)
+- `@solana/web3.js` + `@solana/wallet-adapter-react` + Phantom adapter
+- SPL Memo Program (`MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr`)
 
-## 🚀 Cara Menjalankan Frontend
+## Cara install
 
 ```bash
-bun install
-cp .env.example .env       # opsional, untuk Mode Simulasi tidak wajib diisi
-bun dev
+bun install        # atau: npm install
+cp .env.example .env
 ```
 
-Buka http://localhost:5173.
+`.env` opsional — default sudah pakai `https://api.devnet.solana.com`.
 
-## ⛓️ Deploy Smart Contract ke Sepolia
+## Cara run lokal
 
-> Sudah include `contracts/MaintenanceRegistry.sol` dan script Hardhat.
-
-1. Install Hardhat (sekali saja):
-
-   ```bash
-   bun add -d hardhat @nomicfoundation/hardhat-toolbox dotenv
-   ```
-
-2. Isi `.env`:
-
-   ```
-   SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/<API_KEY>
-   PRIVATE_KEY=0xprivate_key_wallet_deployer
-   ```
-
-   Pastikan wallet deployer punya ETH Sepolia (gunakan faucet seperti
-   https://sepoliafaucet.com).
-
-3. Compile & deploy:
-
-   ```bash
-   npx hardhat compile
-   npx hardhat run scripts/deploy.cjs --network sepolia
-   ```
-
-4. Catat address yang ter-print, lalu set di `.env` aplikasi:
-
-   ```
-   VITE_CONTRACT_ADDRESS=0x...
-   VITE_SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/<API_KEY>
-   ```
-
-5. Restart dev server.
-
-## 🦊 Connect Wallet
-
-- Aplikasi memakai **injected connector** wagmi (mendukung MetaMask, Brave Wallet, Coinbase Wallet extension, Rabby, dll).
-- Wallet **hanya wajib** untuk aksi “Daftarkan ke Blockchain”.
-- Dashboard, Verifikasi, Riwayat, dan Edukasi tetap bisa dibuka tanpa wallet.
-- Pastikan jaringan diset ke **Sepolia** (tombol di menu wallet membantu melakukan switch otomatis).
-
-## 🧪 Cara Demo
-
-1. Buka **/registrasi**, hubungkan wallet (atau biarkan di Mode Simulasi).
-2. Pilih Area → Bagian → Equipment.
-3. Pilih jenis maintenance, tulis catatan, upload file (PDF/JPG/PNG).
-4. Browser akan menghitung hash SHA-256.
-5. Klik **Daftarkan ke Blockchain**. Tunggu konfirmasi.
-6. Buka **/verifikasi**, upload file yang sama → status “Terverifikasi”.
-7. Coba edit file sedikit (atau pilih file berbeda) → status “Tidak Terverifikasi”.
-8. Buka **/riwayat** untuk melihat audit trail.
-
-## 🗂️ Struktur Folder
-
-```
-contracts/                   Smart contract Solidity
-scripts/deploy.cjs           Hardhat deploy script
-src/
-  components/                Navbar, theme toggle, wallet button, providers
-  data/                      Dummy database (equipment, users)
-  hooks/                     Hooks reusable
-  lib/                       hash.ts, registry.ts, wagmi.ts
-  routes/                    File-based routes (dashboard, registrasi, ...)
-  styles.css                 Design tokens + utilities
+```bash
+bun dev            # atau: npm run dev
 ```
 
-## 🧠 Arsitektur Data
+Buka <http://localhost:5173>.
 
-| Lapisan      | Disimpan di sini                                        |
-| ------------ | ------------------------------------------------------- |
-| **Off-chain** (frontend) | Daftar area, bagian, equipment, user dummy + mapping wallet → nama |
-| **On-chain** (contract)  | `fileHash`, `equipmentCode`, `maintenanceType`, `note`, `timestamp`, `registeredBy` |
+## Install Phantom Wallet
 
-File asli tidak pernah dikirim ke jaringan. Hanya **hash** yang on-chain.
+1. Buka <https://phantom.app/download> → install ekstensi Chrome/Firefox/Brave,
+   atau app Phantom di iOS/Android.
+2. Buat wallet baru, simpan seed phrase.
+3. Buka Settings → Developer Settings → **Testnet Mode: ON** lalu pilih
+   network **Devnet**.
 
-## 📜 Lisensi
+## Dapatkan SOL Devnet gratis
 
-MIT — silakan dipakai untuk belajar.
+Pilih salah satu faucet:
+
+- Faucet resmi: <https://faucet.solana.com> (paste address Phantom → request 1 SOL).
+- Alchemy faucet: <https://www.alchemy.com/faucets/solana-devnet>.
+- CLI: `solana airdrop 1 <ADDRESS> --url devnet`.
+
+Tunggu beberapa detik sampai saldo muncul di Phantom (pastikan Phantom di mode
+Devnet, bukan Mainnet).
+
+## Cara demo aplikasi
+
+1. **Hubungkan Phantom** dari pojok kanan atas (mode Devnet).
+2. **Registrasi**: pilih Area → Bagian → Equipment, isi jenis maintenance &
+   catatan, upload file. Hash SHA-256 dihitung otomatis di browser.
+3. Klik **Daftarkan ke Blockchain** → approve transaksi di Phantom.
+4. Setelah konfirmasi, signature muncul + tombol **Lihat di Solana Explorer**.
+5. **Verifikasi**: upload ulang file → jika hash cocok dengan catatan
+   on-chain, muncul *"Dokumen Terverifikasi"*. Kalau file diubah seujung
+   byte pun, hash berbeda → ditolak.
+6. **Riwayat**: tab *Riwayat Publik* untuk semua transaksi, *Riwayat Saya*
+   untuk filter berdasarkan wallet yang terhubung.
+
+## Catatan keamanan
+
+- Memo Solana **bukan tempat menyimpan data rahasia** — hash & metadata yang
+  ditulis bersifat publik. Jangan masukkan PII/rahasia di field catatan.
+- Index lokal hanya untuk UX. Jika user pindah browser, data riwayat tidak
+  ikut — tapi bukti on-chain tetap hidup selamanya di Devnet, dapat dicari
+  via Explorer dengan signature.
