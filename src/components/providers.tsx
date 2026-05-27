@@ -23,6 +23,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <ConnectionProvider endpoint={SOLANA_ENDPOINT}>
           <WalletProvider wallets={wallets} autoConnect>
             {children}
+            <Toaster richColors position="top-right" />
           </WalletProvider>
         </ConnectionProvider>
       </QueryClientProvider>
