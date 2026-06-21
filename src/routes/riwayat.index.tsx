@@ -15,11 +15,14 @@ import {
   UserRound,
   Wallet,
   ExternalLink,
+  ChevronRight,
 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { explorerTxUrl } from "@/lib/solana";
+import { StatusBadge } from "@/components/status-badge";
+import { ProgressBar } from "@/components/progress-bar";
 
-export const Route = createFileRoute("/riwayat")({
+export const Route = createFileRoute("/riwayat/")({
   head: () => ({
     meta: [
       { title: "Riwayat Registrasi — MaintProof" },
@@ -235,63 +238,77 @@ function RecordRow({ record }: { record: MaintenanceRecord }) {
       variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
       exit={{ opacity: 0 }}
     >
-      <GlassCard className="hover:shadow-glow transition">
-        <div className="flex flex-wrap items-start gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">
-                {eq?.name ?? record.equipmentName ?? "Equipment"}
-              </span>
-              <span
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  typeColor[record.maintenanceType] ?? "bg-secondary"
-                }`}
+      <Link
+        to="/riwayat/$signature"
+        params={{ signature: record.signature }}
+        className="block"
+      >
+        <GlassCard className="group hover:shadow-glow transition cursor-pointer">
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">
+                  {eq?.name ?? record.equipmentName ?? "Equipment"}
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    typeColor[record.maintenanceType] ?? "bg-secondary"
+                  }`}
+                >
+                  {record.maintenanceType}
+                </span>
+                <StatusBadge status={record.status} />
+              </div>
+              <div className="mt-1 font-mono text-xs text-muted-foreground">
+                {record.equipmentCode}
+              </div>
+              <p className="mt-2 line-clamp-2 text-sm text-foreground/80">
+                {record.note}
+              </p>
+              <ProgressBar status={record.status} size="sm" className="mt-3 max-w-xs" />
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="font-mono" title={record.registeredBy}>
+                  {shortAddress(record.registeredBy)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {date.toLocaleString("id-ID", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </span>
+                <span>
+                  Hash:{" "}
+                  <span className="font-mono text-foreground">
+                    {shortHash(record.fileHash)}
+                  </span>
+                </span>
+                <span>
+                  Tx:{" "}
+                  <span className="font-mono text-foreground">
+                    {shortSig(record.signature)}
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <a
+                href={explorerTxUrl(record.signature)}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20"
               >
-                {record.maintenanceType}
-              </span>
-            </div>
-            <div className="mt-1 font-mono text-xs text-muted-foreground">
-              {record.equipmentCode}
-            </div>
-            <p className="mt-2 line-clamp-2 text-sm text-foreground/80">
-              {record.note}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span className="font-mono" title={record.registeredBy}>
-                {shortAddress(record.registeredBy)}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {date.toLocaleString("id-ID", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
-              </span>
-              <span>
-                Hash:{" "}
-                <span className="font-mono text-foreground">
-                  {shortHash(record.fileHash)}
-                </span>
-              </span>
-              <span>
-                Tx:{" "}
-                <span className="font-mono text-foreground">
-                  {shortSig(record.signature)}
-                </span>
+                <ExternalLink className="h-3.5 w-3.5" />
+                Explorer
+              </a>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary opacity-70 transition group-hover:opacity-100">
+                Detail <ChevronRight className="h-3.5 w-3.5" />
               </span>
             </div>
           </div>
-          <a
-            href={explorerTxUrl(record.signature)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Lihat Transaksi
-          </a>
-        </div>
-      </GlassCard>
+        </GlassCard>
+      </Link>
     </motion.div>
   );
 }

@@ -15,9 +15,21 @@ import {
   ArrowRight,
   ExternalLink,
   CircleDot,
+  CalendarClock,
+  PlayCircle,
+  AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import { shortAddress, shortHash, shortSig } from "@/data/users";
 import { NETWORK_LABEL, explorerTxUrl } from "@/lib/solana";
+import {
+  MAINTENANCE_STATUSES,
+  STATUS_LABEL_ID,
+  STATUS_THEME,
+  type MaintenanceStatus,
+} from "@/lib/status";
+import { StatusBadge } from "@/components/status-badge";
+import { ProgressBar } from "@/components/progress-bar";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -26,7 +38,7 @@ export const Route = createFileRoute("/dashboard")({
       {
         name: "description",
         content:
-          "Ringkasan registrasi, status Phantom Wallet, dan koneksi Solana Devnet.",
+          "Ringkasan registrasi, progres maintenance, dan koneksi Solana Devnet.",
       },
     ],
   }),
@@ -43,9 +55,30 @@ function DashboardPage() {
     ? records.filter((r) => r.registeredBy === address).length
     : 0;
 
+  const statusCount = useMemo(() => {
+    const init: Record<MaintenanceStatus, number> = {
+      Scheduled: 0,
+      "In Progress": 0,
+      "Follow Up Required": 0,
+      Completed: 0,
+    };
+    for (const r of records) init[r.status] = (init[r.status] ?? 0) + 1;
+    return init;
+  }, [records]);
+
+  const statusCards: {
+    status: MaintenanceStatus;
+    icon: typeof FileText;
+  }[] = [
+    { status: "Scheduled", icon: CalendarClock },
+    { status: "In Progress", icon: PlayCircle },
+    { status: "Follow Up Required", icon: AlertTriangle },
+    { status: "Completed", icon: CheckCircle2 },
+  ];
+
   const stats = [
     {
-      label: "Total Transaksi",
+      label: "Total Maintenance",
       value: records.length,
       icon: Activity,
       accent: "primary" as const,
@@ -146,6 +179,91 @@ function DashboardPage() {
 
       <section className="mt-10">
         <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Status Maintenance</h2>
+          <span className="text-xs text-muted-foreground">
+            Ringkasan progres seluruh laporan
+          </span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {statusCards.map((s, i) => {
+            const theme = STATUS_THEME[s.status];
+            const count = statusCount[s.status];
+            return (
+              <motion.div
+                key={s.status}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <GlassCard className={`ring-1 ${theme.ring} hover:shadow-glow transition`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {STATUS_LABEL_ID[s.status]}
+                    </span>
+                    <span
+                      className={`grid h-9 w-9 place-items-center rounded-xl ${theme.chip}`}
+                    >
+                      <s.icon className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div className="mt-3 text-3xl font-bold">{count}</div>
+                  <div className="mt-3">
+                    <ProgressBar status={s.status} size="sm" />
+                  </div>
+                </GlassCard>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <GlassCard className="mt-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-semibold">Distribusi Status</span>
+            <span className="text-xs text-muted-foreground">
+              {records.length} laporan total
+            </span>
+          </div>
+          {records.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Belum ada data untuk ditampilkan.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {MAINTENANCE_STATUSES.map((s) => {
+                const count = statusCount[s];
+                const pct = records.length
+                  ? Math.round((count / records.length) * 100)
+                  : 0;
+                const theme = STATUS_THEME[s];
+                return (
+                  <div key={s}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="inline-flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${theme.dot}`} />
+                        <span className="font-medium">{STATUS_LABEL_ID[s]}</span>
+                      </span>
+                      <span className="font-mono text-muted-foreground">
+                        {count} · {pct}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                        className={`h-full rounded-full ${theme.bar}`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </GlassCard>
+      </section>
+
+      <section className="mt-10">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Transaksi Terbaru</h2>
           <Link
             to="/riwayat"
@@ -169,32 +287,40 @@ function DashboardPage() {
         ) : (
           <div className="space-y-2">
             {recent.map((r) => (
-              <GlassCard
+              <Link
                 key={r.signature}
-                className="flex flex-wrap items-center gap-3"
+                to="/riwayat/$signature"
+                params={{ signature: r.signature }}
+                className="block"
               >
-                <div className="flex-1 min-w-[200px]">
-                  <div className="font-semibold">
-                    {r.equipmentName ?? r.equipmentCode}
+                <GlassCard className="flex flex-wrap items-center gap-3 hover:shadow-glow transition">
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">
+                        {r.equipmentName ?? r.equipmentCode}
+                      </span>
+                      <StatusBadge status={r.status} />
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {r.maintenanceType} · {shortAddress(r.registeredBy)}
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {r.maintenanceType} · {shortAddress(r.registeredBy)}
+                  <div className="font-mono text-xs text-muted-foreground">
+                    {shortHash(r.fileHash)}
                   </div>
-                </div>
-                <div className="font-mono text-xs text-muted-foreground">
-                  {shortHash(r.fileHash)}
-                </div>
-                <a
-                  href={explorerTxUrl(r.signature)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20"
-                  title={r.signature}
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  {shortSig(r.signature)}
-                </a>
-              </GlassCard>
+                  <a
+                    href={explorerTxUrl(r.signature)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20"
+                    title={r.signature}
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    {shortSig(r.signature)}
+                  </a>
+                </GlassCard>
+              </Link>
             ))}
           </div>
         )}
