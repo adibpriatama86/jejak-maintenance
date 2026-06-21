@@ -328,6 +328,3 @@ function DashboardPage() {
     </PageShell>
   );
 }
-    </PageShell>
-  );
-}
