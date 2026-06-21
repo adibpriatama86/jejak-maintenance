@@ -15,6 +15,7 @@ import { Route as RegistrasiRouteImport } from './routes/registrasi'
 import { Route as EdukasiRouteImport } from './routes/edukasi'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RiwayatSignatureRouteImport } from './routes/riwayat.$signature'
 
 const VerifikasiRoute = VerifikasiRouteImport.update({
   id: '/verifikasi',
@@ -46,22 +47,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RiwayatSignatureRoute = RiwayatSignatureRouteImport.update({
+  id: '/$signature',
+  path: '/$signature',
+  getParentRoute: () => RiwayatRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/edukasi': typeof EdukasiRoute
   '/registrasi': typeof RegistrasiRoute
-  '/riwayat': typeof RiwayatRoute
+  '/riwayat': typeof RiwayatRouteWithChildren
   '/verifikasi': typeof VerifikasiRoute
+  '/riwayat/$signature': typeof RiwayatSignatureRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/edukasi': typeof EdukasiRoute
   '/registrasi': typeof RegistrasiRoute
-  '/riwayat': typeof RiwayatRoute
+  '/riwayat': typeof RiwayatRouteWithChildren
   '/verifikasi': typeof VerifikasiRoute
+  '/riwayat/$signature': typeof RiwayatSignatureRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -69,8 +77,9 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/edukasi': typeof EdukasiRoute
   '/registrasi': typeof RegistrasiRoute
-  '/riwayat': typeof RiwayatRoute
+  '/riwayat': typeof RiwayatRouteWithChildren
   '/verifikasi': typeof VerifikasiRoute
+  '/riwayat/$signature': typeof RiwayatSignatureRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/registrasi'
     | '/riwayat'
     | '/verifikasi'
+    | '/riwayat/$signature'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/registrasi'
     | '/riwayat'
     | '/verifikasi'
+    | '/riwayat/$signature'
   id:
     | '__root__'
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/registrasi'
     | '/riwayat'
     | '/verifikasi'
+    | '/riwayat/$signature'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -104,7 +116,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   EdukasiRoute: typeof EdukasiRoute
   RegistrasiRoute: typeof RegistrasiRoute
-  RiwayatRoute: typeof RiwayatRoute
+  RiwayatRoute: typeof RiwayatRouteWithChildren
   VerifikasiRoute: typeof VerifikasiRoute
 }
 
@@ -152,15 +164,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/riwayat/$signature': {
+      id: '/riwayat/$signature'
+      path: '/$signature'
+      fullPath: '/riwayat/$signature'
+      preLoaderRoute: typeof RiwayatSignatureRouteImport
+      parentRoute: typeof RiwayatRoute
+    }
   }
 }
+
+interface RiwayatRouteChildren {
+  RiwayatSignatureRoute: typeof RiwayatSignatureRoute
+}
+
+const RiwayatRouteChildren: RiwayatRouteChildren = {
+  RiwayatSignatureRoute: RiwayatSignatureRoute,
+}
+
+const RiwayatRouteWithChildren =
+  RiwayatRoute._addFileChildren(RiwayatRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   EdukasiRoute: EdukasiRoute,
   RegistrasiRoute: RegistrasiRoute,
-  RiwayatRoute: RiwayatRoute,
+  RiwayatRoute: RiwayatRouteWithChildren,
   VerifikasiRoute: VerifikasiRoute,
 }
 export const routeTree = rootRouteImport

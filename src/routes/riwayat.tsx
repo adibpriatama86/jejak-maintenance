@@ -15,9 +15,12 @@ import {
   UserRound,
   Wallet,
   ExternalLink,
+  ChevronRight,
 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { explorerTxUrl } from "@/lib/solana";
+import { StatusBadge } from "@/components/status-badge";
+import { ProgressBar } from "@/components/progress-bar";
 
 export const Route = createFileRoute("/riwayat")({
   head: () => ({
