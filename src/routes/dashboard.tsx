@@ -15,9 +15,21 @@ import {
   ArrowRight,
   ExternalLink,
   CircleDot,
+  CalendarClock,
+  PlayCircle,
+  AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import { shortAddress, shortHash, shortSig } from "@/data/users";
 import { NETWORK_LABEL, explorerTxUrl } from "@/lib/solana";
+import {
+  MAINTENANCE_STATUSES,
+  STATUS_LABEL_ID,
+  STATUS_THEME,
+  type MaintenanceStatus,
+} from "@/lib/status";
+import { StatusBadge } from "@/components/status-badge";
+import { ProgressBar } from "@/components/progress-bar";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -26,7 +38,7 @@ export const Route = createFileRoute("/dashboard")({
       {
         name: "description",
         content:
-          "Ringkasan registrasi, status Phantom Wallet, dan koneksi Solana Devnet.",
+          "Ringkasan registrasi, progres maintenance, dan koneksi Solana Devnet.",
       },
     ],
   }),
@@ -43,9 +55,30 @@ function DashboardPage() {
     ? records.filter((r) => r.registeredBy === address).length
     : 0;
 
+  const statusCount = useMemo(() => {
+    const init: Record<MaintenanceStatus, number> = {
+      Scheduled: 0,
+      "In Progress": 0,
+      "Follow Up Required": 0,
+      Completed: 0,
+    };
+    for (const r of records) init[r.status] = (init[r.status] ?? 0) + 1;
+    return init;
+  }, [records]);
+
+  const statusCards: {
+    status: MaintenanceStatus;
+    icon: typeof FileText;
+  }[] = [
+    { status: "Scheduled", icon: CalendarClock },
+    { status: "In Progress", icon: PlayCircle },
+    { status: "Follow Up Required", icon: AlertTriangle },
+    { status: "Completed", icon: CheckCircle2 },
+  ];
+
   const stats = [
     {
-      label: "Total Transaksi",
+      label: "Total Maintenance",
       value: records.length,
       icon: Activity,
       accent: "primary" as const,
