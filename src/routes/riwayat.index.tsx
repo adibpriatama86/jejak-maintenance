@@ -22,7 +22,7 @@ import { explorerTxUrl } from "@/lib/solana";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 
-export const Route = createFileRoute("/riwayat")({
+export const Route = createFileRoute("/riwayat/")({
   head: () => ({
     meta: [
       { title: "Riwayat Registrasi — MaintProof" },
